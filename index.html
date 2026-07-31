@@ -330,7 +330,7 @@
         // ⚙️ CẤU HÌNH GOOGLE SHEETS API V4 VÀ SERVICE ACCOUNT JSON
         // =========================================================================
         const GOOGLE_CONFIG = {
-            spreadsheetId: '1ns3J3N9NLAkgqh1hML_iEYz7orO1m8jFvdF4ULSyIO8', // Ví dụ: 1ABCxyz123456789_ChuoiIdCuaBan
+            spreadsheetId: '1ns3J3N9NLAkgqh1hML_iEYz7orO1m8jFvdF4ULSyIO8',
             serviceAccountJson: {
                 "type": "service_account",
                 "project_id": "circular-curve-503913-f5",
@@ -356,71 +356,72 @@
             loadFromGoogleSheets();
         });
 
-// 🔑 HÀM XÁC THỰC GOOGLE OAUTH2 (ĐÃ SỬA LỖI INVALID JWT SIGNATURE)
-async function getGoogleAccessToken() {
-    if (googleAccessToken && Date.now() < tokenExpiry - 60000) {
-        return googleAccessToken;
-    }
+        // 🔑 HÀM XÁC THỰC GOOGLE OAUTH2 BẰNG SERVICE ACCOUNT JWT (ĐÃ SỬA LỖI KEYUTIL)
+        async function getGoogleAccessToken() {
+            if (googleAccessToken && Date.now() < tokenExpiry - 60000) {
+                return googleAccessToken;
+            }
 
-    const sa = GOOGLE_CONFIG.serviceAccountJson;
-    if (!sa || !sa.client_email || !sa.private_key || GOOGLE_CONFIG.spreadsheetId.includes('DÁN_')) {
-        updateSyncBadge('error', 'Chưa cấu hình Google JSON / ID');
-        return null;
-    }
+            const sa = GOOGLE_CONFIG.serviceAccountJson;
+            if (!sa || !sa.client_email || !sa.private_key || GOOGLE_CONFIG.spreadsheetId.includes('DÁN_')) {
+                updateSyncBadge('error', 'Chưa cấu hình Google JSON / ID');
+                return null;
+            }
 
-    try {
-        const now = Math.floor(Date.now() / 1000);
-        const header = { alg: 'RS256', typ: 'JWT' };
-        const claimSet = {
-            iss: sa.client_email,
-            scope: 'https://www.googleapis.com/auth/spreadsheets',
-            aud: 'https://oauth2.googleapis.com/token',
-            exp: now + 3600,
-            iat: now - 10 // Trừ 10s tránh lệch múi giờ máy chủ
-        };
+            try {
+                const now = Math.floor(Date.now() / 1000);
+                const header = { alg: 'RS256', typ: 'JWT' };
+                const claimSet = {
+                    iss: sa.client_email,
+                    scope: 'https://www.googleapis.com/auth/spreadsheets',
+                    aud: 'https://oauth2.googleapis.com/token',
+                    exp: now + 3600,
+                    iat: now - 10
+                };
 
-        const sHeader = JSON.stringify(header);
-        const sPayload = JSON.stringify(claimSet);
-        
-        // 🛠️ SỬA LỖI TẠI ĐÂY: Chuyển ký tự \\n thành dấu xuống dòng PEM chuẩn
-        let pemKey = sa.private_key;
-        if (typeof pemKey === 'string') {
-            pemKey = pemKey.replace(/\\n/g, '\n');
+                const sHeader = JSON.stringify(header);
+                const sPayload = JSON.stringify(claimSet);
+                
+                // 🛠️ ĐIỀU CHỈNH CHUẨN ĐỊNH DẠNG PEM KEY VÀ TẠO OBJECT VỚI KEYUTIL
+                let pemKey = sa.private_key;
+                if (typeof pemKey === 'string') {
+                    pemKey = pemKey.replace(/\\n/g, '\n').trim();
+                }
+
+                const prvKeyObj = KEYUTIL.getKey(pemKey);
+                const jwtToken = KJUR.jws.JWS.sign("RS256", sHeader, sPayload, prvKeyObj);
+
+                const res = await fetch('https://oauth2.googleapis.com/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                        assertion: jwtToken
+                    })
+                });
+
+                const data = await res.json();
+                if (data.access_token) {
+                    googleAccessToken = data.access_token;
+                    tokenExpiry = Date.now() + (data.expires_in * 1000);
+                    return googleAccessToken;
+                } else {
+                    console.error("Lỗi Google Auth:", data);
+                    throw new Error(data.error_description || 'JWT Auth Failed');
+                }
+            } catch (err) {
+                console.error("Lỗi xác thực Google:", err);
+                updateSyncBadge('error', 'Lỗi JWT Key (Xem console)');
+                return null;
+            }
         }
 
-        const jwtToken = KJUR.jws.JWS.sign("RS256", sHeader, sPayload, pemKey);
-
-        const res = await fetch('https://oauth2.googleapis.com/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-                assertion: jwtToken
-            })
-        });
-
-        const data = await res.json();
-        if (data.access_token) {
-            googleAccessToken = data.access_token;
-            tokenExpiry = Date.now() + (data.expires_in * 1000);
-            return googleAccessToken;
-        } else {
-            console.error("Lỗi Google Auth:", data);
-            throw new Error(data.error_description || 'JWT Auth Failed');
-        }
-    } catch (err) {
-        console.error("Lỗi xác thực Google:", err);
-        updateSyncBadge('error', 'Lỗi JWT Signature (Kiểm tra JSON)');
-        return null;
-    }
-}
         // 📥 ĐỌC DỮ LIỆU TỪ GOOGLE SHEET KHI MỞ TRANG
         async function loadFromGoogleSheets() {
             updateSyncBadge('syncing', 'Đang kết nối Google Sheet...');
             const token = await getGoogleAccessToken();
 
             if (!token) {
-                // Fallback LocalStorage nếu chưa cấu hình Google Sheet
                 const local = localStorage.getItem('textlink_data_v4');
                 links = local ? JSON.parse(local) : [];
                 render();
@@ -458,10 +459,9 @@ async function getGoogleAccessToken() {
             }
         }
 
-        // 📤 ĐỒNG BỘ DỮ LIỆU LÊN GOOGLE SHEET KHI CÓ HÀNH ĐỘNG (ADD, EDIT, DELETE...)
+        // 📤 ĐỒNG BỘ DỮ LIỆU LÊN GOOGLE SHEET KHI CÓ HÀNH ĐỘNG
         let isSyncing = false;
         async function syncToGoogleSheets() {
-            // Luôn lưu bản sao dự phòng ở LocalStorage
             localStorage.setItem('textlink_data_v4', JSON.stringify(links));
 
             const token = await getGoogleAccessToken();
@@ -486,14 +486,12 @@ async function getGoogleAccessToken() {
                     item.renewCount || 0
                 ]);
 
-                // 1. Xóa sạch vùng A2:K2000
                 const clearUrl = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_CONFIG.spreadsheetId}/values/A2:K2000:clear`;
                 await fetch(clearUrl, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
-                // 2. Ghi đè dữ liệu mới
                 if (rows.length > 0) {
                     const writeUrl = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_CONFIG.spreadsheetId}/values/A2?valueInputOption=USER_ENTERED`;
                     await fetch(writeUrl, {
@@ -534,7 +532,6 @@ async function getGoogleAccessToken() {
             syncToGoogleSheets();
         }
 
-        // Lấy tỷ giá crypto realtime
         async function fetchCryptoRate() {
             try {
                 const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=vnd');
