@@ -34,13 +34,11 @@
                 </nav>
 
                 <div class="flex items-center gap-2">
-                    <!-- Dynamic Google Sheet Sync Status Indicator -->
                     <div id="syncBadge" class="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs">
                         <span id="syncDot" class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
                         <span id="syncText" class="font-medium text-slate-600">Đang kiểm tra kết nối...</span>
                     </div>
 
-                    <!-- Dynamic Crypto Exchange Rate -->
                     <div class="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs" title="Tỷ giá USDT/VND">
                         <i class="fa-solid fa-coins text-amber-500"></i>
                         <span id="rateDisplay" class="font-bold text-slate-900">25,400 ₫</span>
@@ -334,7 +332,7 @@
             loadFromGoogleSheets();
         });
 
-        // 📥 ĐỌC BAN ĐẦU TỪ GOOGLE SHEET
+        // 📥 ĐỌC DỮ LIỆU TỪ GOOGLE SHEET (ĐÃ BẢO VỆ CHUẨN ĐỊNH DẠNG NGÀY)
         async function loadFromGoogleSheets() {
             updateSyncBadge('syncing', 'Đang tải dữ liệu...');
             
@@ -357,8 +355,8 @@
                         anchor: row[2] || '',
                         url: row[3] || '',
                         price: parseFloat(row[4]) || 0,
-                        startDate: row[5] || '',
-                        endDate: row[6] || '',
+                        startDate: formatDateDisplay(row[5] || ''), // Chuẩn hóa về DD/MM/YYYY
+                        endDate: formatDateDisplay(row[6] || ''),   // Chuẩn hóa về DD/MM/YYYY
                         paymentStatus: row[7] || 'Chưa thanh toán',
                         status: row[8] || 'active',
                         partner: row[9] || '',
@@ -376,9 +374,8 @@
             }
         }
 
-        // 🚀 HÀM ĐỒNG BỘ VI MÔ (DELTA SYNC) - TỐI ƯU SIÊU NHANH
+        // 🚀 HÀM ĐỒNG BỘ VI MÔ (DELTA SYNC)
         async function sendSyncAction(payload) {
-            // Luôn sao lưu vào LocalStorage ngay lập tức
             localStorage.setItem('textlink_data_v4', JSON.stringify(links));
             render();
 
@@ -424,21 +421,34 @@
             render();
         }
 
+        // BỘ PARSER NGÀY THÔNG MINH - XÓA BỎ LỆCH MÚI GIỜ UTC
         function parseToDate(dateStr) {
             if (!dateStr) return null;
             dateStr = String(dateStr).trim();
+
+            // Nếu dữ liệu là chuỗi ISO UTC (VD: 2026-08-14T17:00:00.000Z)
+            if (dateStr.includes('T')) {
+                const d = new Date(dateStr);
+                return isNaN(d) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            }
+
+            // Dạng DD/MM/YYYY hoặc DD-MM-YYYY
             if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/.test(dateStr)) {
                 const parts = dateStr.split(/[\/\-]/);
                 return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
             }
+
+            // Dạng YYYY-MM-DD hoặc YYYY/MM/DD
             if (/^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}$/.test(dateStr)) {
                 const parts = dateStr.split(/[\/\-]/);
                 return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
             }
+
             const d = new Date(dateStr);
             return isNaN(d) ? null : d;
         }
 
+        // LUÔN ÉP HIỂN THỊ CHUẨN DD/MM/YYYY
         function formatDateDisplay(dateStr) {
             const d = parseToDate(dateStr);
             if (!d) return dateStr || '';
@@ -700,7 +710,6 @@
             });
         }
 
-        // Cập nhật trạng thái thanh toán 1 link -> Gửi Delta Sync
         function updatePaymentStatus(id, newStatus) {
             const item = links.find(l => l.id === id);
             if (item) {
@@ -709,7 +718,6 @@
             }
         }
 
-        // Đổi trạng thái Bật / Ngừng -> Gửi Delta Sync
         function toggleCancelLink(id, newStatus) {
             const item = links.find(l => l.id === id);
             if (item) {
@@ -740,7 +748,6 @@
             }
         }
 
-        // Đổi thanh toán hàng loạt -> Gửi Delta Sync
         function bulkSetPayment(status) {
             const selected = document.querySelectorAll('.row-checkbox:checked');
             const selectedIds = Array.from(selected).map(cb => cb.value);
@@ -752,7 +759,6 @@
             sendSyncAction({ action: 'BULK_UPDATE_PAYMENT', ids: selectedIds, paymentStatus: status });
         }
 
-        // Xóa chọn nhiều -> Gửi Delta Sync
         function deleteSelected() {
             const selected = document.querySelectorAll('.row-checkbox:checked');
             const selectedIds = Array.from(selected).map(cb => cb.value);
@@ -798,12 +804,11 @@
             document.getElementById('renewModal').classList.add('hidden');
         }
 
-        // Xác nhận Gia hạn -> Gửi Delta Sync
         function submitRenewal(e) {
             e.preventDefault();
             const id = document.getElementById('renewLinkId').value;
-            const newStart = document.getElementById('renewStartDate').value.trim();
-            const newEnd = document.getElementById('renewEndDate').value.trim();
+            const newStart = formatDateDisplay(document.getElementById('renewStartDate').value.trim());
+            const newEnd = formatDateDisplay(document.getElementById('renewEndDate').value.trim());
             const newPrice = document.getElementById('renewPrice').value;
 
             const item = links.find(l => l.id === id);
@@ -831,7 +836,6 @@
             document.getElementById('linkModal').classList.add('hidden');
         }
 
-        // Lưu / Thêm 1 Link -> Gửi Delta Sync
         function saveLink(e) {
             e.preventDefault();
             const id = document.getElementById('linkId').value;
@@ -839,8 +843,8 @@
             const anchor = document.getElementById('anchor').value.trim();
             const url = document.getElementById('url').value.trim();
             const price = document.getElementById('price').value;
-            const startDate = document.getElementById('startDate').value.trim();
-            const endDate = document.getElementById('endDate').value.trim();
+            const startDate = formatDateDisplay(document.getElementById('startDate').value.trim());
+            const endDate = formatDateDisplay(document.getElementById('endDate').value.trim());
             const partner = document.getElementById('partner').value.trim();
             const paymentStatus = document.getElementById('paymentStatus').value;
 
@@ -876,15 +880,14 @@
             document.getElementById('anchor').value = item.anchor;
             document.getElementById('url').value = item.url;
             document.getElementById('price').value = item.price;
-            document.getElementById('startDate').value = item.startDate;
-            document.getElementById('endDate').value = item.endDate;
+            document.getElementById('startDate').value = formatDateDisplay(item.startDate);
+            document.getElementById('endDate').value = formatDateDisplay(item.endDate);
             document.getElementById('partner').value = item.partner || '';
             document.getElementById('paymentStatus').value = item.paymentStatus || 'Chưa thanh toán';
 
             openModal(true);
         }
 
-        // Xóa 1 link -> Gửi Delta Sync
         function deleteLink(id) {
             if (confirm('Xóa textlink này?')) {
                 links = links.filter(l => l.id !== id);
@@ -925,7 +928,6 @@
             return '';
         }
 
-        // Import CSV -> Gửi SYNC_ALL
         function importCSV(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -940,8 +942,8 @@
                         const anchor = getRowValue(row, ["Anchor", "Anchor Text"]);
                         const url = getRowValue(row, ["Url", "URL", "Url Đích"]);
                         const rawPrice = getRowValue(row, ["Số tiền", "So Tien", "price"]);
-                        const startDate = getRowValue(row, ["Ngày đặt", "Ngay Dat", "startDate"]);
-                        const endDate = getRowValue(row, ["Ngày hết hạn", "Ngay Het Han", "endDate"]);
+                        const startDate = formatDateDisplay(getRowValue(row, ["Ngày đặt", "Ngay Dat", "startDate"]));
+                        const endDate = formatDateDisplay(getRowValue(row, ["Ngày hết hạn", "Ngay Het Han", "endDate"]));
                         const partner = getRowValue(row, ["Đối tác", "Doi Tac", "partner"]);
                         const paymentStatus = getRowValue(row, ["Tình trạng thanh toán", "paymentStatus"]) || "Chưa thanh toán";
                         const statusVal = getRowValue(row, ["Trạng thái", "status"]);
