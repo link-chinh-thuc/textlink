@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SEO Textlink & Google Sheets Live Sync</title>
+    <title>SEO Textlink & Google Sheets Live Sync (Optimized)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -23,7 +23,7 @@
                     </div>
                     <div>
                         <h1 class="font-bold text-slate-900 text-lg leading-tight">SEO LinkHub Pro</h1>
-                        <p class="text-xs text-slate-500">Google Sheets Live Syncing System</p>
+                        <p class="text-xs text-slate-500">Google Sheets Delta Sync Engine</p>
                     </div>
                 </div>
 
@@ -34,11 +34,13 @@
                 </nav>
 
                 <div class="flex items-center gap-2">
+                    <!-- Dynamic Google Sheet Sync Status Indicator -->
                     <div id="syncBadge" class="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs">
                         <span id="syncDot" class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
                         <span id="syncText" class="font-medium text-slate-600">Đang kiểm tra kết nối...</span>
                     </div>
 
+                    <!-- Dynamic Crypto Exchange Rate -->
                     <div class="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs" title="Tỷ giá USDT/VND">
                         <i class="fa-solid fa-coins text-amber-500"></i>
                         <span id="rateDisplay" class="font-bold text-slate-900">25,400 ₫</span>
@@ -332,9 +334,9 @@
             loadFromGoogleSheets();
         });
 
-        // 📥 ĐỌC DỮ LIỆU TỪ GOOGLE SHEET (QUA APPS SCRIPT)
+        // 📥 ĐỌC BAN ĐẦU TỪ GOOGLE SHEET
         async function loadFromGoogleSheets() {
-            updateSyncBadge('syncing', 'Đang kết nối Google Sheet...');
+            updateSyncBadge('syncing', 'Đang tải dữ liệu...');
             
             if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes('DÁN_URL_WEB_APP_CỦA_BẠN')) {
                 updateSyncBadge('error', 'Chưa dán URL Google Web App');
@@ -374,30 +376,27 @@
             }
         }
 
-        // 📤 ĐỒNG BỘ DỮ LIỆU LÊN GOOGLE SHEET (QUA APPS SCRIPT)
-        let isSyncing = false;
-        async function syncToGoogleSheets() {
+        // 🚀 HÀM ĐỒNG BỘ VI MÔ (DELTA SYNC) - TỐI ƯU SIÊU NHANH
+        async function sendSyncAction(payload) {
+            // Luôn sao lưu vào LocalStorage ngay lập tức
             localStorage.setItem('textlink_data_v4', JSON.stringify(links));
+            render();
 
             if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes('DÁN_URL_WEB_APP_CỦA_BẠN')) return;
 
-            if (isSyncing) return;
-            isSyncing = true;
             updateSyncBadge('syncing', 'Đang đồng bộ...');
 
             try {
                 await fetch(GAS_WEB_APP_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(links)
+                    body: JSON.stringify(payload)
                 });
 
                 updateSyncBadge('success', 'Đã đồng bộ lên Sheet');
             } catch (err) {
-                console.error("Lỗi ghi Google Sheet:", err);
+                console.error("Lỗi đồng bộ action:", err);
                 updateSyncBadge('error', 'Lỗi đồng bộ Sheet');
-            } finally {
-                isSyncing = false;
             }
         }
 
@@ -413,11 +412,6 @@
             } else {
                 dot.className = "w-2.5 h-2.5 rounded-full bg-rose-500";
             }
-        }
-
-        function saveData() {
-            render();
-            syncToGoogleSheets();
         }
 
         async function fetchCryptoRate() {
@@ -706,14 +700,22 @@
             });
         }
 
+        // Cập nhật trạng thái thanh toán 1 link -> Gửi Delta Sync
         function updatePaymentStatus(id, newStatus) {
             const item = links.find(l => l.id === id);
-            if (item) { item.paymentStatus = newStatus; saveData(); }
+            if (item) {
+                item.paymentStatus = newStatus;
+                sendSyncAction({ action: 'BULK_UPDATE_PAYMENT', ids: [id], paymentStatus: newStatus });
+            }
         }
 
+        // Đổi trạng thái Bật / Ngừng -> Gửi Delta Sync
         function toggleCancelLink(id, newStatus) {
             const item = links.find(l => l.id === id);
-            if (item) { item.status = newStatus; saveData(); }
+            if (item) {
+                item.status = newStatus;
+                sendSyncAction({ action: 'UPDATE', data: item });
+            }
         }
 
         function toggleSelectAll(master) {
@@ -738,6 +740,7 @@
             }
         }
 
+        // Đổi thanh toán hàng loạt -> Gửi Delta Sync
         function bulkSetPayment(status) {
             const selected = document.querySelectorAll('.row-checkbox:checked');
             const selectedIds = Array.from(selected).map(cb => cb.value);
@@ -746,9 +749,10 @@
             links.forEach(item => {
                 if (selectedIds.includes(item.id)) item.paymentStatus = status;
             });
-            saveData();
+            sendSyncAction({ action: 'BULK_UPDATE_PAYMENT', ids: selectedIds, paymentStatus: status });
         }
 
+        // Xóa chọn nhiều -> Gửi Delta Sync
         function deleteSelected() {
             const selected = document.querySelectorAll('.row-checkbox:checked');
             const selectedIds = Array.from(selected).map(cb => cb.value);
@@ -756,7 +760,7 @@
 
             if (confirm(`Bạn có chắc muốn xóa ${selectedIds.length} textlink đã chọn?`)) {
                 links = links.filter(item => !selectedIds.includes(item.id));
-                saveData();
+                sendSyncAction({ action: 'BULK_DELETE', ids: selectedIds });
             }
         }
 
@@ -794,6 +798,7 @@
             document.getElementById('renewModal').classList.add('hidden');
         }
 
+        // Xác nhận Gia hạn -> Gửi Delta Sync
         function submitRenewal(e) {
             e.preventDefault();
             const id = document.getElementById('renewLinkId').value;
@@ -810,8 +815,8 @@
                 item.status = 'active';
                 item.renewCount = (item.renewCount || 0) + 1;
 
-                saveData();
                 closeRenewModal();
+                sendSyncAction({ action: 'UPDATE', data: item });
             }
         }
 
@@ -826,6 +831,7 @@
             document.getElementById('linkModal').classList.add('hidden');
         }
 
+        // Lưu / Thêm 1 Link -> Gửi Delta Sync
         function saveLink(e) {
             e.preventDefault();
             const id = document.getElementById('linkId').value;
@@ -846,17 +852,19 @@
                 const index = links.findIndex(item => item.id === id);
                 if (index !== -1) {
                     links[index] = { ...links[index], targetSite, anchor, url, price, startDate, endDate, partner, paymentStatus };
+                    closeModal();
+                    sendSyncAction({ action: 'UPDATE', data: links[index] });
                 }
             } else {
-                links.push({
+                const newItem = {
                     id: Date.now().toString(),
                     targetSite, anchor, url, price, startDate, endDate, partner, paymentStatus,
                     status: 'active'
-                });
+                };
+                links.push(newItem);
+                closeModal();
+                sendSyncAction({ action: 'ADD', data: newItem });
             }
-
-            saveData();
-            closeModal();
         }
 
         function editLink(id) {
@@ -876,10 +884,11 @@
             openModal(true);
         }
 
+        // Xóa 1 link -> Gửi Delta Sync
         function deleteLink(id) {
             if (confirm('Xóa textlink này?')) {
                 links = links.filter(l => l.id !== id);
-                saveData();
+                sendSyncAction({ action: 'DELETE', id: id });
             }
         }
 
@@ -916,6 +925,7 @@
             return '';
         }
 
+        // Import CSV -> Gửi SYNC_ALL
         function importCSV(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -950,7 +960,7 @@
                             count++;
                         }
                     });
-                    saveData();
+                    sendSyncAction({ action: 'SYNC_ALL', data: links });
                     alert(`Đã nhập thành công ${count} link từ file CSV!`);
                     document.getElementById('csvFileInput').value = '';
                 }
