@@ -10,8 +10,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- PapaParse CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    <!-- Thư viện jsrsasign để mã hóa JWT Service Account ngay trên Trình duyệt -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsrsasign/10.8.6/jsrsasign-all-min.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
 
@@ -19,7 +17,6 @@
     <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
         <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
-                <!-- Logo / Title -->
                 <div class="flex items-center gap-3">
                     <div class="p-2 bg-indigo-600 text-white rounded-xl shadow-md">
                         <i class="fa-solid fa-link text-xl"></i>
@@ -30,22 +27,18 @@
                     </div>
                 </div>
 
-                <!-- Navigation Menu Ngang -->
                 <nav class="hidden md:flex space-x-1">
                     <a href="#kpi-section" class="px-3 py-2 text-sm font-medium text-slate-700 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition">Tổng Quan</a>
                     <a href="#stats-section" class="px-3 py-2 text-sm font-medium text-slate-700 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition">Tài Chính Web</a>
                     <a href="#data-table-section" class="px-3 py-2 text-sm font-medium text-slate-700 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition">Danh Sách Link</a>
                 </nav>
 
-                <!-- Action Controls & Sync Status -->
                 <div class="flex items-center gap-2">
-                    <!-- Dynamic Google Sheet Sync Status Indicator -->
                     <div id="syncBadge" class="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs">
                         <span id="syncDot" class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
                         <span id="syncText" class="font-medium text-slate-600">Đang kiểm tra kết nối...</span>
                     </div>
 
-                    <!-- Dynamic Crypto Exchange Rate -->
                     <div class="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs" title="Tỷ giá USDT/VND">
                         <i class="fa-solid fa-coins text-amber-500"></i>
                         <span id="rateDisplay" class="font-bold text-slate-900">25,400 ₫</span>
@@ -327,101 +320,24 @@
 
     <script>
         // =========================================================================
-        // ⚙️ CẤU HÌNH GOOGLE SHEETS API V4 VÀ SERVICE ACCOUNT JSON
+        // ⚙️ DÁN URL WEB APP CỦA GOOGLE APPS SCRIPT VÀO ĐÂY:
         // =========================================================================
-        const GOOGLE_CONFIG = {
-            spreadsheetId: '1ns3J3N9NLAkgqh1hML_iEYz7orO1m8jFvdF4ULSyIO8',
-            serviceAccountJson: {
-                "type": "service_account",
-                "project_id": "circular-curve-503913-f5",
-                "private_key_id": "2e14f33e97bbb1c1d01e79a1470251c8655fcf5b",
-                "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDZdaX6r0+/ThRH\nqcjIgOq02Kj+OgBxmdytryu/g193Deb5xz/NjHwO1wU9zzoK8jiCd/iPONhvvn4g\nI7FIm6hFYHKOzzz69vtIGzFI8V24J2KHH+WrWjkL/g64lBLc+boJoyxLqWFA7FNX\nK+rpHSVO8qeULbG5D2cT3zU4uxwyXHHCc6w4DUElTlDxesbDt6hfIx+Ghj1ZkHxp\nB81hngaTWJQfnjVfpe1AO1Pv/krKRayFd4e4+6ymo/M24vIuKuS9nKMXgto3s263\n1H7mrPp8BA7jDzqo2sjVV9ezsVuveHkSicSDUy7gJpnQihZgSTfXm+HcnOntpmeA\n2dYkbhu5AgMBAAECggEACfIxGMGq9peGIu73kYAf/AyK0jHp8kg0yTbhW92Q4Lug\njF0aJHcf93fLNBQF1hlVD1aYZkiV0aqXTzYCtkz0SdQK+VAuPFZOkPI5c1oizLj0\nbzS8xvUV9d/1YWjYYgYEBcvSS1Wgbp1AhJSsJmRgX/eGRac/YTT8pHKJlyIrvHvb\nXEzGuaf6frdZgkIhEW1Z67IQ3jl8MPu+fQodA3nYJw983yK/ZOeVwZHAI/t5XjeC\nRejvidH5C6SD32FVVeQ7YrFy9xiT8dFvj+aTURdQOGvmPKPwE0oDP/H6v+037hkA\nP69qFEgJ8n9Gb4vDyn9joHfPSIC1hDckDLUzieZAvwKBgQDvM4IOVPiuIOvuUTyf\nOCW4FJUKB4AHOK/rxaze8kC88BBDQ4v+6b9eFxYzrpGbRsCvTWSZZp7TAxzx0fG9\n8kD7Rasmic0F2pJXi0ocQ4x02qYB3iPNtA7aIkqVehRZ0lV/pmAB5lyfNDEA9xve\nCLMYONd6Xraitc6elcFTzJJLRwKBgQDou0HPNsJm+Xc/WDwpjCHQxeFZEa0kSBVY\n7h4/OFVVhGWSnE52iysKNyaaR1myJR2Fvr0wchbqU1PN3JOKIbtB6UoJmGHUq+zV\nTGJ7mpNSXhnicRHL6BtFFvSaU+utVD005A6fJ07vcyV41oJ5kZp38M28DurColQy\nUgeJCfHg/wKBgQCohJY8uJpWOrVcuXjHB0xzinSRk0UcUVCG/0XR78OyGEKs0Lqh\nRVZf2E347SSBy2/WUOTtucFtEcVjjDAOTMyA+c0hInYBiMIO0P/ON7yNWrkXmcOJ\nmS/Zd80pz87klO1NOA5taDiapK9daboFTAW4q9sKyA1NRl6hlQmVmwr54wKBgQCv\n/cMTRm6V3jot3bSJGp4LuUfiyforgJMcD90xo5DsPVVuG+M9w5nFfNUlP6V1kJmV\npRp+AxiPFHpAJ3gusblga2EAhoocf/J1jfC/VbHoTJ64XRa/IoNUqLpJ5gJHrXcn\ngvoHonsPmfyRN22tLs0nvCJn/sPKcWTINL3cBHgz0wKBgDbJAH79R0JGFvQCe+OI\nuSQ2PXQBB1om+8/4d20wyiODI8yjFyD3Na3N9CfDicvcdwY5My0TH5L6zpoJLk3k\nfmURYBcNp3aB3bUmGdDiuLt1snYhfZsjVA3KSE0quwZuNMG/svEv1TdddUtKbykF\n+6ZTzgRjok3TOtfrzHIXwvEe\n-----END PRIVATE KEY-----\n",
-                "client_email": "index-75@circular-curve-503913-f5.iam.gserviceaccount.com",
-                "client_id": "106466495655468692047",
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/index-75%40circular-curve-503913-f5.iam.gserviceaccount.com",
-                "universe_domain": "googleapis.com"
-            }
-        };
+        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyZNYBnS_TC_R9_AtCIZw0P9cfhKzvHyWM-dcqh889cHvbTi22Di-VTVzhXnnJMaay-/exec'; // Dạng: https://script.google.com/macros/s/AKfycb.../exec
 
         let links = [];
         let cryptoRate = 25400;
-        let googleAccessToken = null;
-        let tokenExpiry = 0;
 
         document.addEventListener('DOMContentLoaded', () => {
             fetchCryptoRate();
             loadFromGoogleSheets();
         });
 
-        // 🔑 HÀM XÁC THỰC GOOGLE OAUTH2 BẰNG SERVICE ACCOUNT JWT (ĐÃ SỬA LỖI KEYUTIL)
-        async function getGoogleAccessToken() {
-            if (googleAccessToken && Date.now() < tokenExpiry - 60000) {
-                return googleAccessToken;
-            }
-
-            const sa = GOOGLE_CONFIG.serviceAccountJson;
-            if (!sa || !sa.client_email || !sa.private_key || GOOGLE_CONFIG.spreadsheetId.includes('DÁN_')) {
-                updateSyncBadge('error', 'Chưa cấu hình Google JSON / ID');
-                return null;
-            }
-
-            try {
-                const now = Math.floor(Date.now() / 1000);
-                const header = { alg: 'RS256', typ: 'JWT' };
-                const claimSet = {
-                    iss: sa.client_email,
-                    scope: 'https://www.googleapis.com/auth/spreadsheets',
-                    aud: 'https://oauth2.googleapis.com/token',
-                    exp: now + 3600,
-                    iat: now - 10
-                };
-
-                const sHeader = JSON.stringify(header);
-                const sPayload = JSON.stringify(claimSet);
-                
-                // 🛠️ ĐIỀU CHỈNH CHUẨN ĐỊNH DẠNG PEM KEY VÀ TẠO OBJECT VỚI KEYUTIL
-                let pemKey = sa.private_key;
-                if (typeof pemKey === 'string') {
-                    pemKey = pemKey.replace(/\\n/g, '\n').trim();
-                }
-
-                const prvKeyObj = KEYUTIL.getKey(pemKey);
-                const jwtToken = KJUR.jws.JWS.sign("RS256", sHeader, sPayload, prvKeyObj);
-
-                const res = await fetch('https://oauth2.googleapis.com/token', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({
-                        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-                        assertion: jwtToken
-                    })
-                });
-
-                const data = await res.json();
-                if (data.access_token) {
-                    googleAccessToken = data.access_token;
-                    tokenExpiry = Date.now() + (data.expires_in * 1000);
-                    return googleAccessToken;
-                } else {
-                    console.error("Lỗi Google Auth:", data);
-                    throw new Error(data.error_description || 'JWT Auth Failed');
-                }
-            } catch (err) {
-                console.error("Lỗi xác thực Google:", err);
-                updateSyncBadge('error', 'Lỗi JWT Key (Xem console)');
-                return null;
-            }
-        }
-
-        // 📥 ĐỌC DỮ LIỆU TỪ GOOGLE SHEET KHI MỞ TRANG
+        // 📥 ĐỌC DỮ LIỆU TỪ GOOGLE SHEET (QUA APPS SCRIPT)
         async function loadFromGoogleSheets() {
             updateSyncBadge('syncing', 'Đang kết nối Google Sheet...');
-            const token = await getGoogleAccessToken();
-
-            if (!token) {
+            
+            if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes('DÁN_URL_WEB_APP_CỦA_BẠN')) {
+                updateSyncBadge('error', 'Chưa dán URL Google Web App');
                 const local = localStorage.getItem('textlink_data_v4');
                 links = local ? JSON.parse(local) : [];
                 render();
@@ -429,13 +345,12 @@
             }
 
             try {
-                const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_CONFIG.spreadsheetId}/values/A2:K2000`;
-                const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+                const res = await fetch(GAS_WEB_APP_URL);
                 const data = await res.json();
 
-                if (data.values) {
-                    links = data.values.map(row => ({
-                        id: row[0] || Date.now().toString(),
+                if (Array.isArray(data)) {
+                    links = data.map(row => ({
+                        id: String(row[0] || Date.now()),
                         targetSite: row[1] || '',
                         anchor: row[2] || '',
                         url: row[3] || '',
@@ -454,55 +369,28 @@
                 updateSyncBadge('success', 'Đã kết nối Google Sheet');
                 render();
             } catch (err) {
-                console.error("Lỗi tải dữ liệu Google Sheet:", err);
-                updateSyncBadge('error', 'Lỗi tải trang Google Sheet');
+                console.error("Lỗi đọc Google Sheet:", err);
+                updateSyncBadge('error', 'Lỗi kết nối Google Sheet');
             }
         }
 
-        // 📤 ĐỒNG BỘ DỮ LIỆU LÊN GOOGLE SHEET KHI CÓ HÀNH ĐỘNG
+        // 📤 ĐỒNG BỘ DỮ LIỆU LÊN GOOGLE SHEET (QUA APPS SCRIPT)
         let isSyncing = false;
         async function syncToGoogleSheets() {
             localStorage.setItem('textlink_data_v4', JSON.stringify(links));
 
-            const token = await getGoogleAccessToken();
-            if (!token) return;
+            if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes('DÁN_URL_WEB_APP_CỦA_BẠN')) return;
 
             if (isSyncing) return;
             isSyncing = true;
             updateSyncBadge('syncing', 'Đang đồng bộ...');
 
             try {
-                const rows = links.map(item => [
-                    item.id,
-                    item.targetSite || '',
-                    item.anchor || '',
-                    item.url || '',
-                    item.price || 0,
-                    item.startDate || '',
-                    item.endDate || '',
-                    item.paymentStatus || 'Chưa thanh toán',
-                    item.status || 'active',
-                    item.partner || '',
-                    item.renewCount || 0
-                ]);
-
-                const clearUrl = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_CONFIG.spreadsheetId}/values/A2:K2000:clear`;
-                await fetch(clearUrl, {
+                await fetch(GAS_WEB_APP_URL, {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(links)
                 });
-
-                if (rows.length > 0) {
-                    const writeUrl = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_CONFIG.spreadsheetId}/values/A2?valueInputOption=USER_ENTERED`;
-                    await fetch(writeUrl, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ values: rows })
-                    });
-                }
 
                 updateSyncBadge('success', 'Đã đồng bộ lên Sheet');
             } catch (err) {
