@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SEO Textlink & Financial Management System</title>
+    <title>SEO Textlink & Google Sheets Live Sync</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- PapaParse CDN hỗ trợ đọc/ghi CSV -->
+    <!-- PapaParse CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- Thư viện jsrsasign để mã hóa JWT Service Account ngay trên Trình duyệt -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsrsasign/10.8.6/jsrsasign-all-min.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
 
@@ -24,7 +26,7 @@
                     </div>
                     <div>
                         <h1 class="font-bold text-slate-900 text-lg leading-tight">SEO LinkHub Pro</h1>
-                        <p class="text-xs text-slate-500">Quản Lý Textlink & Công Nợ Gia Hạn</p>
+                        <p class="text-xs text-slate-500">Google Sheets Live Syncing System</p>
                     </div>
                 </div>
 
@@ -35,11 +37,17 @@
                     <a href="#data-table-section" class="px-3 py-2 text-sm font-medium text-slate-700 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition">Danh Sách Link</a>
                 </nav>
 
-                <!-- Action Controls -->
+                <!-- Action Controls & Sync Status -->
                 <div class="flex items-center gap-2">
+                    <!-- Dynamic Google Sheet Sync Status Indicator -->
+                    <div id="syncBadge" class="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs">
+                        <span id="syncDot" class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                        <span id="syncText" class="font-medium text-slate-600">Đang kiểm tra kết nối...</span>
+                    </div>
+
+                    <!-- Dynamic Crypto Exchange Rate -->
                     <div class="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs" title="Tỷ giá USDT/VND">
                         <i class="fa-solid fa-coins text-amber-500"></i>
-                        <span class="font-medium text-slate-600">USDT:</span>
                         <span id="rateDisplay" class="font-bold text-slate-900">25,400 ₫</span>
                         <button onclick="fetchCryptoRate()" class="text-slate-400 hover:text-indigo-600 ml-1">
                             <i class="fa-solid fa-rotate-right"></i>
@@ -66,7 +74,6 @@
 
         <!-- 1. FINANCIAL & SEO KPI CARDS -->
         <section id="kpi-section" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- Card 1 -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200/80 flex items-center justify-between">
                 <div>
                     <p class="text-xs font-semibold text-slate-500 uppercase">Tổng Text Link Chạy</p>
@@ -78,7 +85,6 @@
                 </div>
             </div>
 
-            <!-- Card 2 -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200/80 flex items-center justify-between">
                 <div>
                     <p class="text-xs font-semibold text-slate-500 uppercase">Đã Chi Tháng Này</p>
@@ -90,7 +96,6 @@
                 </div>
             </div>
 
-            <!-- Card 3 -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200/80 flex items-center justify-between">
                 <div>
                     <p class="text-xs font-semibold text-slate-500 uppercase">Chưa Thanh Toán</p>
@@ -102,7 +107,6 @@
                 </div>
             </div>
 
-            <!-- Card 4 -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200/80 flex items-center justify-between">
                 <div>
                     <p class="text-xs font-semibold text-slate-500 uppercase">Dự Kiến Gia Hạn Tháng Sau</p>
@@ -137,24 +141,19 @@
             </div>
         </section>
 
-        <!-- 3. BẢNG DANH SÁCH TEXTLINK + BỘ LỌC + KHUNG CUỘN THÔNG MINH -->
+        <!-- 3. BẢNG DANH SÁCH TEXTLINK + BỘ LỌC + KHUNG CUỘN -->
         <section id="data-table-section" class="bg-white rounded-xl shadow-sm border border-slate-200/80 overflow-hidden">
-            
-            <!-- Filter & Bulk Actions Bar -->
             <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-wrap gap-3 items-center justify-between">
                 <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
-                    <!-- Search Input -->
                     <div class="relative min-w-[200px]">
                         <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                         <input type="text" id="searchInput" oninput="render()" placeholder="Tìm Anchor, Site, Đối tác..." class="pl-8 pr-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none w-full bg-white">
                     </div>
 
-                    <!-- Filter Website -->
                     <select id="filterWebsite" onchange="render()" class="py-1.5 px-3 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-medium">
                         <option value="">-- Tất cả Website --</option>
                     </select>
 
-                    <!-- Filter Status -->
                     <select id="filterStatus" onchange="render()" class="py-1.5 px-3 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-medium">
                         <option value="">-- Tất cả Trạng thái --</option>
                         <option value="expiring">Sắp hết hạn (&lt; 10 ngày)</option>
@@ -163,7 +162,6 @@
                         <option value="cancelled">🚫 Đã hủy / Ngừng gia hạn</option>
                     </select>
 
-                    <!-- Filter Payment Status -->
                     <select id="filterPayment" onchange="render()" class="py-1.5 px-3 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-medium">
                         <option value="">-- Thanh toán --</option>
                         <option value="Chưa thanh toán">❌ Chưa thanh toán</option>
@@ -171,7 +169,6 @@
                     </select>
                 </div>
 
-                <!-- Bulk Actions Toolbar -->
                 <div class="flex items-center gap-2">
                     <div id="bulkActionGroup" class="hidden flex items-center gap-1.5">
                         <button onclick="bulkSetPayment('Đã thanh toán')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition">
@@ -187,7 +184,7 @@
                 </div>
             </div>
 
-            <!-- TABLE CONTAINER CÓ THANH CUỘN KHÔNG BỊ CHE -->
+            <!-- TABLE CONTAINER -->
             <div class="overflow-auto max-h-[calc(100vh-280px)] relative">
                 <table class="w-full text-xs text-left text-slate-600 whitespace-nowrap">
                     <thead class="text-xs text-slate-700 uppercase bg-slate-100 border-b border-slate-200 sticky top-0 z-20 shadow-sm">
@@ -318,9 +315,7 @@
                     <input type="number" step="0.01" id="renewPrice" required class="w-full border p-2 rounded-lg text-xs font-bold text-indigo-600 outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
 
-                <p class="text-[11px] text-amber-600 italic">
-                    * Sau khi gia hạn, trạng thái thanh toán sẽ được chuyển về "Chưa thanh toán" cho kỳ mới.
-                </p>
+                <p class="text-[11px] text-amber-600 italic">* Sau khi gia hạn, trạng thái thanh toán sẽ được chuyển về "Chưa thanh toán" cho kỳ mới.</p>
 
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
                     <button type="button" onclick="closeRenewModal()" class="px-4 py-2 border rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50">Hủy</button>
@@ -331,13 +326,209 @@
     </div>
 
     <script>
+        // =========================================================================
+        // ⚙️ CẤU HÌNH GOOGLE SHEETS API V4 VÀ SERVICE ACCOUNT JSON
+        // =========================================================================
+        const GOOGLE_CONFIG = {
+            spreadsheetId: '1ns3J3N9NLAkgqh1hML_iEYz7orO1m8jFvdF4ULSyIO8', // Ví dụ: 1ABCxyz123456789_ChuoiIdCuaBan
+            serviceAccountJson: {
+                // DÁN NGUYÊN VĂN NỘI DUNG FILE JSON CỦA BẠN VÀO ĐÂY:
+                /*
+                "type": "service_account",
+  "project_id": "circular-curve-503913-f5",
+  "private_key_id": "2e14f33e97bbb1c1d01e79a1470251c8655fcf5b",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDZdaX6r0+/ThRH\nqcjIgOq02Kj+OgBxmdytryu/g193Deb5xz/NjHwO1wU9zzoK8jiCd/iPONhvvn4g\nI7FIm6hFYHKOzzz69vtIGzFI8V24J2KHH+WrWjkL/g64lBLc+boJoyxLqWFA7FNX\nK+rpHSVO8qeULbG5D2cT3zU4uxwyXHHCc6w4DUElTlDxesbDt6hfIx+Ghj1ZkHxp\nB81hngaTWJQfnjVfpe1AO1Pv/krKRayFd4e4+6ymo/M24vIuKuS9nKMXgto3s263\n1H7mrPp8BA7jDzqo2sjVV9ezsVuveHkSicSDUy7gJpnQihZgSTfXm+HcnOntpmeA\n2dYkbhu5AgMBAAECggEACfIxGMGq9peGIu73kYAf/AyK0jHp8kg0yTbhW92Q4Lug\njF0aJHcf93fLNBQF1hlVD1aYZkiV0aqXTzYCtkz0SdQK+VAuPFZOkPI5c1oizLj0\nbzS8xvUV9d/1YWjYYgYEBcvSS1Wgbp1AhJSsJmRgX/eGRac/YTT8pHKJlyIrvHvb\nXEzGuaf6frdZgkIhEW1Z67IQ3jl8MPu+fQodA3nYJw983yK/ZOeVwZHAI/t5XjeC\nRejvidH5C6SD32FVVeQ7YrFy9xiT8dFvj+aTURdQOGvmPKPwE0oDP/H6v+037hkA\nP69qFEgJ8n9Gb4vDyn9joHfPSIC1hDckDLUzieZAvwKBgQDvM4IOVPiuIOvuUTyf\nOCW4FJUKB4AHOK/rxaze8kC88BBDQ4v+6b9eFxYzrpGbRsCvTWSZZp7TAxzx0fG9\n8kD7Rasmic0F2pJXi0ocQ4x02qYB3iPNtA7aIkqVehRZ0lV/pmAB5lyfNDEA9xve\nCLMYONd6Xraitc6elcFTzJJLRwKBgQDou0HPNsJm+Xc/WDwpjCHQxeFZEa0kSBVY\n7h4/OFVVhGWSnE52iysKNyaaR1myJR2Fvr0wchbqU1PN3JOKIbtB6UoJmGHUq+zV\nTGJ7mpNSXhnicRHL6BtFFvSaU+utVD005A6fJ07vcyV41oJ5kZp38M28DurColQy\nUgeJCfHg/wKBgQCohJY8uJpWOrVcuXjHB0xzinSRk0UcUVCG/0XR78OyGEKs0Lqh\nRVZf2E347SSBy2/WUOTtucFtEcVjjDAOTMyA+c0hInYBiMIO0P/ON7yNWrkXmcOJ\nmS/Zd80pz87klO1NOA5taDiapK9daboFTAW4q9sKyA1NRl6hlQmVmwr54wKBgQCv\n/cMTRm6V3jot3bSJGp4LuUfiyforgJMcD90xo5DsPVVuG+M9w5nFfNUlP6V1kJmV\npRp+AxiPFHpAJ3gusblga2EAhoocf/J1jfC/VbHoTJ64XRa/IoNUqLpJ5gJHrXcn\ngvoHonsPmfyRN22tLs0nvCJn/sPKcWTINL3cBHgz0wKBgDbJAH79R0JGFvQCe+OI\nuSQ2PXQBB1om+8/4d20wyiODI8yjFyD3Na3N9CfDicvcdwY5My0TH5L6zpoJLk3k\nfmURYBcNp3aB3bUmGdDiuLt1snYhfZsjVA3KSE0quwZuNMG/svEv1TdddUtKbykF\n+6ZTzgRjok3TOtfrzHIXwvEe\n-----END PRIVATE KEY-----\n",
+  "client_email": "index-75@circular-curve-503913-f5.iam.gserviceaccount.com",
+  "client_id": "106466495655468692047",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/index-75%40circular-curve-503913-f5.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+                */
+            }
+        };
+
         let links = [];
-        let cryptoRate = 25400; // Tỷ giá mặc định USDT/VND
+        let cryptoRate = 25400;
+        let googleAccessToken = null;
+        let tokenExpiry = 0;
 
         document.addEventListener('DOMContentLoaded', () => {
-            loadData();
             fetchCryptoRate();
+            loadFromGoogleSheets();
         });
+
+        // 🔑 HÀM XÁC THỰC GOOGLE OAUTH2 BẰNG SERVICE ACCOUNT JWT
+        async function getGoogleAccessToken() {
+            if (googleAccessToken && Date.now() < tokenExpiry - 60000) {
+                return googleAccessToken;
+            }
+
+            const sa = GOOGLE_CONFIG.serviceAccountJson;
+            if (!sa || !sa.client_email || !sa.private_key || GOOGLE_CONFIG.spreadsheetId.includes('DÁN_')) {
+                updateSyncBadge('error', 'Chưa cấu hình Google JSON / ID');
+                return null;
+            }
+
+            try {
+                const now = Math.floor(Date.now() / 1000);
+                const header = { alg: 'RS256', typ: 'JWT' };
+                const claimSet = {
+                    iss: sa.client_email,
+                    scope: 'https://www.googleapis.com/auth/spreadsheets',
+                    aud: 'https://oauth2.googleapis.com/token',
+                    exp: now + 3600,
+                    iat: now
+                };
+
+                const sHeader = JSON.stringify(header);
+                const sPayload = JSON.stringify(claimSet);
+                const jwtToken = KJUR.jws.JWS.sign("RS256", sHeader, sPayload, sa.private_key);
+
+                const res = await fetch('https://oauth2.googleapis.com/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                        assertion: jwtToken
+                    })
+                });
+
+                const data = await res.json();
+                if (data.access_token) {
+                    googleAccessToken = data.access_token;
+                    tokenExpiry = Date.now() + (data.expires_in * 1000);
+                    return googleAccessToken;
+                } else {
+                    throw new Error(data.error_description || 'JWT Auth Failed');
+                }
+            } catch (err) {
+                console.error("Lỗi xác thực Google:", err);
+                updateSyncBadge('error', 'Lỗi xác thực Service Account');
+                return null;
+            }
+        }
+
+        // 📥 ĐỌC DỮ LIỆU TỪ GOOGLE SHEET KHI MỞ TRANG
+        async function loadFromGoogleSheets() {
+            updateSyncBadge('syncing', 'Đang kết nối Google Sheet...');
+            const token = await getGoogleAccessToken();
+
+            if (!token) {
+                // Fallback LocalStorage nếu chưa cấu hình Google Sheet
+                const local = localStorage.getItem('textlink_data_v4');
+                links = local ? JSON.parse(local) : [];
+                render();
+                return;
+            }
+
+            try {
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_CONFIG.spreadsheetId}/values/A2:K2000`;
+                const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+
+                if (data.values) {
+                    links = data.values.map(row => ({
+                        id: row[0] || Date.now().toString(),
+                        targetSite: row[1] || '',
+                        anchor: row[2] || '',
+                        url: row[3] || '',
+                        price: parseFloat(row[4]) || 0,
+                        startDate: row[5] || '',
+                        endDate: row[6] || '',
+                        paymentStatus: row[7] || 'Chưa thanh toán',
+                        status: row[8] || 'active',
+                        partner: row[9] || '',
+                        renewCount: parseInt(row[10]) || 0
+                    }));
+                } else {
+                    links = [];
+                }
+
+                updateSyncBadge('success', 'Đã kết nối Google Sheet');
+                render();
+            } catch (err) {
+                console.error("Lỗi tải dữ liệu Google Sheet:", err);
+                updateSyncBadge('error', 'Lỗi tải trang Google Sheet');
+            }
+        }
+
+        // 📤 ĐỒNG BỘ DỮ LIỆU LÊN GOOGLE SHEET KHI CÓ HÀNH ĐỘNG (ADD, EDIT, DELETE...)
+        let isSyncing = false;
+        async function syncToGoogleSheets() {
+            // Luôn lưu bản sao dự phòng ở LocalStorage
+            localStorage.setItem('textlink_data_v4', JSON.stringify(links));
+
+            const token = await getGoogleAccessToken();
+            if (!token) return;
+
+            if (isSyncing) return;
+            isSyncing = true;
+            updateSyncBadge('syncing', 'Đang đồng bộ...');
+
+            try {
+                const rows = links.map(item => [
+                    item.id,
+                    item.targetSite || '',
+                    item.anchor || '',
+                    item.url || '',
+                    item.price || 0,
+                    item.startDate || '',
+                    item.endDate || '',
+                    item.paymentStatus || 'Chưa thanh toán',
+                    item.status || 'active',
+                    item.partner || '',
+                    item.renewCount || 0
+                ]);
+
+                // 1. Xóa sạch vùng A2:K2000
+                const clearUrl = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_CONFIG.spreadsheetId}/values/A2:K2000:clear`;
+                await fetch(clearUrl, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                // 2. Ghi đè dữ liệu mới
+                if (rows.length > 0) {
+                    const writeUrl = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_CONFIG.spreadsheetId}/values/A2?valueInputOption=USER_ENTERED`;
+                    await fetch(writeUrl, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ values: rows })
+                    });
+                }
+
+                updateSyncBadge('success', 'Đã đồng bộ lên Sheet');
+            } catch (err) {
+                console.error("Lỗi ghi Google Sheet:", err);
+                updateSyncBadge('error', 'Lỗi đồng bộ Sheet');
+            } finally {
+                isSyncing = false;
+            }
+        }
+
+        function updateSyncBadge(type, text) {
+            const dot = document.getElementById('syncDot');
+            const txt = document.getElementById('syncText');
+            txt.innerText = text;
+
+            if (type === 'syncing') {
+                dot.className = "w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping";
+            } else if (type === 'success') {
+                dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
+            } else {
+                dot.className = "w-2.5 h-2.5 rounded-full bg-rose-500";
+            }
+        }
+
+        function saveData() {
+            render();
+            syncToGoogleSheets();
+        }
 
         // Lấy tỷ giá crypto realtime
         async function fetchCryptoRate() {
@@ -345,14 +536,9 @@
                 const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=vnd');
                 const data = await res.json();
                 if (data.tether && data.tether.vnd) cryptoRate = data.tether.vnd;
-            } catch (e) { console.warn('Dùng tỷ giá mặc định:', cryptoRate); }
-            updateRateDisplays();
+            } catch (e) {}
+            document.getElementById('rateDisplay').innerText = new Intl.NumberFormat('vi-VN').format(cryptoRate) + ' ₫';
             render();
-        }
-
-        function updateRateDisplays() {
-            const formatted = new Intl.NumberFormat('vi-VN').format(cryptoRate) + ' ₫';
-            document.getElementById('rateDisplay').innerText = formatted;
         }
 
         function parseToDate(dateStr) {
@@ -414,16 +600,6 @@
         function formatUSD(num) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num || 0); }
         function formatVND(num) { return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num || 0); }
 
-        function loadData() {
-            const data = localStorage.getItem('textlink_data_v4');
-            links = data ? JSON.parse(data) : [];
-        }
-
-        function saveData() {
-            localStorage.setItem('textlink_data_v4', JSON.stringify(links));
-            render();
-        }
-
         function render() {
             populateWebsiteFilterOptions();
             const filteredLinks = getFilteredLinks();
@@ -481,11 +657,7 @@
             const currentMonth = today.getMonth();
             const currentYear = today.getFullYear();
 
-            let totalExpiringSoon = 0;
-            let currentMonthSpentUSD = 0;
-            let unpaidUSD = 0;
-            let nextMonthForecastUSD = 0;
-            let totalActiveLinks = 0;
+            let totalExpiringSoon = 0, currentMonthSpentUSD = 0, unpaidUSD = 0, nextMonthForecastUSD = 0, totalActiveLinks = 0;
 
             links.forEach(item => {
                 const isCancelled = item.status === 'cancelled';
@@ -499,30 +671,22 @@
                     if (days >= 0 && days < 10) totalExpiringSoon++;
                     if (days >= 0 && days <= 30) nextMonthForecastUSD += price;
                 }
-
                 if (startDate && startDate.getMonth() === currentMonth && startDate.getFullYear() === currentYear) {
                     currentMonthSpentUSD += price;
                 }
-
-                if (paymentStatus === 'Chưa thanh toán') {
-                    unpaidUSD += price;
-                }
+                if (paymentStatus === 'Chưa thanh toán') unpaidUSD += price;
             });
 
             document.getElementById('kpiTotalLinks').innerText = totalActiveLinks;
             document.getElementById('kpiExpiringSoon').innerText = totalExpiringSoon;
-
             document.getElementById('kpiCurrentMonthUSD').innerText = formatUSD(currentMonthSpentUSD);
             document.getElementById('kpiCurrentMonthVND').innerText = '≈ ' + formatVND(currentMonthSpentUSD * cryptoRate);
-
             document.getElementById('kpiUnpaidUSD').innerText = formatUSD(unpaidUSD);
             document.getElementById('kpiUnpaidVND').innerText = '≈ ' + formatVND(unpaidUSD * cryptoRate);
-
             document.getElementById('kpiNextMonthUSD').innerText = formatUSD(nextMonthForecastUSD);
             document.getElementById('kpiNextMonthVND').innerText = '≈ ' + formatVND(nextMonthForecastUSD * cryptoRate);
         }
 
-        // BẢNG PHÂN BỔ TÀI CHÍNH BỔ SUNG HÀNG TỔNG CỘNG
         function renderStats() {
             const tbody = document.getElementById('statsTableBody');
             tbody.innerHTML = '';
@@ -545,7 +709,6 @@
                     if (days >= 0 && days < 10) stats[website].expiring += 1;
                     if (days >= 0 && days <= 30) stats[website].nextMonthUSD += price;
                 }
-
                 if (startDate && startDate.getMonth() === currentMonth && startDate.getFullYear() === currentYear) {
                     stats[website].monthCostUSD += price;
                 }
@@ -556,10 +719,7 @@
                 return;
             }
 
-            let grandTotalLinks = 0;
-            let grandTotalExpiring = 0;
-            let grandTotalMonthCostUSD = 0;
-            let grandTotalNextMonthUSD = 0;
+            let grandTotalLinks = 0, grandTotalExpiring = 0, grandTotalMonthCostUSD = 0, grandTotalNextMonthUSD = 0;
 
             for (const [website, data] of Object.entries(stats)) {
                 grandTotalLinks += data.total;
@@ -580,7 +740,6 @@
                 tbody.appendChild(tr);
             }
 
-            // DÒNG HÀNG TỔNG CỘNG ĐƯỢC BỔ SUNG VÀO CUỐI BẢNG
             const trTotal = document.createElement('tr');
             trTotal.className = "bg-indigo-50/90 border-t-2 border-indigo-200 text-slate-900";
             trTotal.innerHTML = `
@@ -639,14 +798,14 @@
                     </td>
                     <td class="px-3 py-2.5 text-xs text-slate-600">${item.partner || '-'}</td>
                     <td class="px-3 py-2.5 text-center space-x-1">
-                        <button onclick="openRenewModal('${item.id}')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold px-2 py-1 rounded text-xs transition" title="Gia hạn thêm thời gian">
+                        <button onclick="openRenewModal('${item.id}')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold px-2 py-1 rounded text-xs transition">
                             <i class="fa-solid fa-rotate-right"></i> Gia Hạn
                         </button>
                         ${isCancelled 
                             ? `<button onclick="toggleCancelLink('${item.id}', 'active')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold px-2 py-1 rounded text-xs transition">
                                 <i class="fa-solid fa-play"></i> Bật Lại
                                </button>`
-                            : `<button onclick="toggleCancelLink('${item.id}', 'cancelled')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold px-2 py-1 rounded text-xs transition" title="Không gia hạn nữa">
+                            : `<button onclick="toggleCancelLink('${item.id}', 'cancelled')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold px-2 py-1 rounded text-xs transition">
                                 <i class="fa-solid fa-ban"></i> Ngừng
                                </button>`
                         }
@@ -665,10 +824,7 @@
 
         function toggleCancelLink(id, newStatus) {
             const item = links.find(l => l.id === id);
-            if (item) {
-                item.status = newStatus;
-                saveData();
-            }
+            if (item) { item.status = newStatus; saveData(); }
         }
 
         function toggleSelectAll(master) {
@@ -699,9 +855,7 @@
             if (selectedIds.length === 0) return;
 
             links.forEach(item => {
-                if (selectedIds.includes(item.id)) {
-                    item.paymentStatus = status;
-                }
+                if (selectedIds.includes(item.id)) item.paymentStatus = status;
             });
             saveData();
         }
