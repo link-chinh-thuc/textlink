@@ -164,10 +164,15 @@
 
                 <div class="flex items-center gap-2">
                     <div id="bulkActionGroup" class="hidden flex items-center gap-1.5">
-                        <!-- NÚT TẠO PHIẾU GIA HẠN MỚI BỔ SUNG -->
                         <button onclick="openSlipModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition flex items-center gap-1">
                             <i class="fa-solid fa-file-invoice-dollar"></i> Tạo Phiếu (<span class="bulk-count">0</span>)
                         </button>
+                        
+                        <!-- NÚT COPY THÔNG TIN MỚI BỔ SUNG -->
+                        <button onclick="copySelectedInfo()" class="bg-sky-600 hover:bg-sky-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition flex items-center gap-1">
+                            <i class="fa-solid fa-copy"></i> Copy Info (<span class="bulk-count">0</span>)
+                        </button>
+
                         <button onclick="bulkSetPayment('Đã thanh toán')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition">
                             <i class="fa-solid fa-check-double"></i> Đã TT (<span class="bulk-count">0</span>)
                         </button>
@@ -322,49 +327,68 @@
         </div>
     </div>
 
-    <!-- MODAL TẠO PHIẾU ĐỀ XUẤT / GIA HẠN TEXTLINK (MỚI BỔ SUNG) -->
+    <!-- MODAL TẠO PHIẾU ĐỀ XUẤT + CHECK AHREFS BATCH -->
     <div id="slipModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 flex flex-col max-h-[90vh]">
+        <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl border border-slate-100 flex flex-col max-h-[92vh]">
             <div class="flex justify-between items-center mb-3">
                 <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                    <i class="fa-solid fa-file-invoice-dollar text-indigo-600"></i> Phiếu Đề Xuất Gia Hạn Textlink
+                    <i class="fa-solid fa-file-invoice-dollar text-indigo-600"></i> Phiếu Đề Xuất Gia Hạn Textlink & Ahrefs Batch
                 </h3>
                 <button onclick="closeSlipModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
 
-            <div class="space-y-3 flex-1 overflow-y-auto pr-1">
-                <div class="grid grid-cols-2 gap-3">
+            <div class="space-y-4 flex-1 overflow-y-auto pr-1">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200/80">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Tên Nhân Viên</label>
-                        <input type="text" id="slipEmployee" value="Ryan" oninput="updateSlipPreview()" class="w-full border border-slate-300 p-2 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+                        <input type="text" id="slipEmployee" value="Ryan" oninput="updateSlipPreview()" class="w-full border border-slate-300 p-2 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 font-medium bg-white">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Số Đơn / Mã Phiếu</label>
-                        <input type="text" id="slipOrderNo" value="06" oninput="updateSlipPreview()" class="w-full border border-slate-300 p-2 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+                        <input type="text" id="slipOrderNo" value="06" oninput="updateSlipPreview()" class="w-full border border-slate-300 p-2 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 font-medium bg-white">
+                    </div>
+                    <div class="sm:col-span-2 flex items-center gap-2 pt-1">
+                        <input type="checkbox" id="slipGroupByPartner" onchange="updateSlipPreview()" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                        <label for="slipGroupByPartner" class="text-xs font-semibold text-slate-700 cursor-pointer">
+                            Phân loại danh sách nhóm riêng theo từng Đối tác
+                        </label>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2 pt-1">
-                    <input type="checkbox" id="slipGroupByPartner" onchange="updateSlipPreview()" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
-                    <label for="slipGroupByPartner" class="text-xs font-semibold text-slate-700 cursor-pointer">
-                        Phân loại danh sách nhóm theo từng Đối tác
-                    </label>
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-xs font-bold text-slate-700 uppercase flex items-center gap-1.5">
+                            <i class="fa-solid fa-receipt text-indigo-600"></i> Nội dung Phiếu Gia Hạn (Tự động +1 tháng)
+                        </label>
+                        <button type="button" onclick="copySlipText()" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+                            <i class="fa-regular fa-copy"></i> Sao chép Phiếu
+                        </button>
+                    </div>
+                    <textarea id="slipPreviewText" rows="9" class="w-full border border-slate-300 p-3 rounded-xl font-mono text-xs text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none leading-relaxed shadow-inner"></textarea>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nội dung phiếu (Xem trước)</label>
-                    <textarea id="slipPreviewText" rows="12" class="w-full border border-slate-300 p-3 rounded-xl font-mono text-xs text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none leading-relaxed shadow-inner"></textarea>
+                <div class="pt-2 border-t border-slate-100">
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-xs font-bold text-slate-700 uppercase flex items-center gap-1.5">
+                            <i class="fa-solid fa-layer-group text-amber-600"></i> Danh sách Site Đặt Text (Ahrefs Batch Analysis)
+                        </label>
+                        <button type="button" onclick="copyAhrefsText()" class="text-xs font-semibold text-amber-600 hover:text-amber-800 flex items-center gap-1">
+                            <i class="fa-regular fa-copy"></i> Copy List Ahrefs
+                        </button>
+                    </div>
+                    <textarea id="ahrefsPreviewText" rows="4" readonly placeholder="Danh sách các domain đặt textlink..." class="w-full border border-slate-300 p-2.5 rounded-xl font-mono text-xs text-slate-700 bg-slate-100 outline-none leading-normal"></textarea>
+                    <p class="text-[11px] text-slate-400 mt-1 italic">* Copy danh sách này dán vào Ahrefs Batch Analysis để chụp ảnh chỉ số DR/UR/Backlink hàng loạt.</p>
                 </div>
             </div>
 
-            <div class="flex justify-between items-center pt-4 mt-2 border-t border-slate-100">
-                <span class="text-xs text-slate-400">Có thể chỉnh sửa trực tiếp trong ô văn bản</span>
-                <div class="flex gap-2">
-                    <button type="button" onclick="closeSlipModal()" class="px-4 py-2 border rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50">Đóng</button>
-                    <button type="button" onclick="copySlipText()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm flex items-center gap-1.5">
-                        <i class="fa-solid fa-copy"></i> Sao Chép Nội Dung
-                    </button>
-                </div>
+            <div class="flex justify-end gap-2 pt-3 mt-2 border-t border-slate-100">
+                <button type="button" onclick="closeSlipModal()" class="px-4 py-2 border rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50">Đóng</button>
+                <button type="button" onclick="copyAhrefsText()" class="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold shadow-sm flex items-center gap-1.5">
+                    <i class="fa-solid fa-list-check"></i> Copy List Ahrefs
+                </button>
+                <button type="button" onclick="copySlipText()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm flex items-center gap-1.5">
+                    <i class="fa-solid fa-copy"></i> Sao Chép Phiếu
+                </button>
             </div>
         </div>
     </div>
@@ -757,14 +781,13 @@
         }
 
         // =========================================================================
-        // 📋 TÍNH NĂNG MỚI: TẠO PHIẾU ĐỀ XUẤT / GIA HẠN TEXTLINK
+        // 📋 TẠO PHIẾU GIA HẠN (+1 THÁNG TỰ ĐỘNG) & AHREFS BATCH LIST
         // =========================================================================
         function openSlipModal() {
             const selected = document.querySelectorAll('.row-checkbox:checked');
             const selectedIds = Array.from(selected).map(cb => cb.value);
             if (selectedIds.length === 0) return alert('Vui lòng chọn ít nhất 1 textlink!');
 
-            // Khôi phục tên NV nếu đã lưu trước đó
             const savedEmp = localStorage.getItem('slip_employee_name');
             if (savedEmp) document.getElementById('slipEmployee').value = savedEmp;
 
@@ -785,23 +808,18 @@
             const orderNo = document.getElementById('slipOrderNo').value.trim() || '01';
             const isGroupByPartner = document.getElementById('slipGroupByPartner').checked;
 
-            // Lưu tên NV
             localStorage.setItem('slip_employee_name', employeeName);
 
             const today = new Date();
             const dateStr = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
 
-            // Danh sách Đối tác duy nhất
             const partners = [...new Set(selectedItems.map(i => i.partner || 'Khác'))].filter(Boolean).join(', ');
-
-            // Danh sách Site đích duy nhất
             const targetSites = [...new Set(selectedItems.map(i => extractDomain(i.url)))].filter(Boolean).join(', ');
 
             let totalUSD = 0;
             let bodyText = "";
 
             if (isGroupByPartner) {
-                // Nhóm danh sách theo từng Đối tác
                 const grouped = {};
                 selectedItems.forEach(item => {
                     const p = item.partner || 'Khác';
@@ -813,11 +831,13 @@
                 for (const [partnerName, items] of Object.entries(grouped)) {
                     bodyText += `--- ĐỐI TÁC: ${partnerName.toUpperCase()} ---\n`;
                     items.forEach(item => {
-                        const startD = parseToDate(item.startDate);
-                        const endD = parseToDate(item.endDate);
-                        const rangeStr = (startD && endD)
-                            ? `${startD.getDate()}/${startD.getMonth() + 1} - ${endD.getDate()}/${endD.getMonth() + 1}`
-                            : `${item.startDate} - ${item.endDate}`;
+                        // Tính toán ngày gia hạn tự động +1 tháng
+                        const oldEndDate = parseToDate(item.endDate) || new Date();
+                        const startD = oldEndDate < today ? today : oldEndDate;
+                        const endD = new Date(startD);
+                        endD.setMonth(endD.getMonth() + 1);
+
+                        const rangeStr = `${startD.getDate()}/${startD.getMonth() + 1} - ${endD.getDate()}/${endD.getMonth() + 1}`;
 
                         bodyText += `${rangeStr}\n`;
                         bodyText += `${item.targetSite} - ${item.price}$\n`;
@@ -826,14 +846,16 @@
                     });
                 }
             } else {
-                // Danh sách liệt kê dạng chuẩn theo ảnh
                 selectedItems.forEach(item => {
                     totalUSD += parseFloat(item.price) || 0;
-                    const startD = parseToDate(item.startDate);
-                    const endD = parseToDate(item.endDate);
-                    const rangeStr = (startD && endD)
-                        ? `${startD.getDate()}/${startD.getMonth() + 1} - ${endD.getDate()}/${endD.getMonth() + 1}`
-                        : `${item.startDate} - ${item.endDate}`;
+                    
+                    // Tính toán ngày gia hạn tự động +1 tháng
+                    const oldEndDate = parseToDate(item.endDate) || new Date();
+                    const startD = oldEndDate < today ? today : oldEndDate;
+                    const endD = new Date(startD);
+                    endD.setMonth(endD.getMonth() + 1);
+
+                    const rangeStr = `${startD.getDate()}/${startD.getMonth() + 1} - ${endD.getDate()}/${endD.getMonth() + 1}`;
 
                     bodyText += `${rangeStr}\n`;
                     bodyText += `${item.targetSite} - ${item.price}$\n`;
@@ -842,26 +864,80 @@
                 });
             }
 
+            // NỘI DUNG PHIẾU CHUẨN THEO YÊU CẦU MỚI
             const fullSlip = `Ngày: ${dateStr}\n` +
                 `Nhân viên : ${employeeName}\n` +
                 `Đơn số : ${orderNo}\n` +
                 `Đối tác : ${partners}\n` +
-                `Đề xuất textlink mới cho site : ${targetSites}\n\n` +
+                `Đề xuất gia hạn textlink cho site : ${targetSites}\n\n` +
                 `${bodyText.trim()}\n\n` +
                 `Tổng: ${totalUSD}$`;
 
             document.getElementById('slipPreviewText').value = fullSlip;
+
+            // TẠO DANH SÁCH SITE ĐẶT TEXT CHO AHREFS BATCH ANALYSIS (Mỗi URL 1 dòng)
+            const ahrefsUrls = [...new Set(selectedItems.map(i => i.targetSite.trim()))].filter(Boolean).join('\n');
+            document.getElementById('ahrefsPreviewText').value = ahrefsUrls;
         }
 
         function copySlipText() {
             const textarea = document.getElementById('slipPreviewText');
             textarea.select();
-            textarea.setSelectionRange(0, 99999);
-
             navigator.clipboard.writeText(textarea.value).then(() => {
-                alert('✅ Đã sao chép phiếu gia hạn vào bộ nhớ tạm!');
+                alert('✅ Đã sao chép nội dung phiếu gia hạn!');
             }).catch(() => {
                 alert('Vui lòng bôi đen và copy thủ công.');
+            });
+        }
+
+        function copyAhrefsText() {
+            const textarea = document.getElementById('ahrefsPreviewText');
+            textarea.select();
+            navigator.clipboard.writeText(textarea.value).then(() => {
+                alert('✅ Đã sao chép danh sách URL cho Ahrefs Batch Analysis!');
+            }).catch(() => {
+                alert('Vui lòng bôi đen và copy thủ công.');
+            });
+        }
+
+        // =========================================================================
+        // 📋 TÍNH NĂNG MỚI BỔ SUNG: COPY THÔNG TIN ĐÃ CHỌN (SAO CHÉP CHI TIẾT)
+        // =========================================================================
+        function copySelectedInfo() {
+            const selected = document.querySelectorAll('.row-checkbox:checked');
+            const selectedIds = Array.from(selected).map(cb => cb.value);
+            if (selectedIds.length === 0) return alert('Vui lòng chọn ít nhất 1 textlink!');
+
+            const selectedItems = links.filter(l => selectedIds.includes(l.id));
+
+            // Tiêu đề các cột khi dán vào Excel/Sheets
+            const headers = ["Site Đặt Text", "Anchor Text", "URL Đích", "Số Tiền ($)", "Thời Hạn", "Đối Tác", "Tình Trạng TT"];
+            let rowsText = [headers.join('\t')];
+
+            selectedItems.forEach(item => {
+                const periodStr = `${formatDateDisplay(item.startDate)} - ${formatDateDisplay(item.endDate)}`;
+                const priceStr = `${item.price}$`;
+                const paymentStr = item.paymentStatus || "Chưa thanh toán";
+                const partnerStr = item.partner || "-";
+
+                const rowData = [
+                    item.targetSite,
+                    item.anchor,
+                    item.url,
+                    priceStr,
+                    periodStr,
+                    partnerStr,
+                    paymentStr
+                ];
+                rowsText.push(rowData.join('\t'));
+            });
+
+            const fullText = rowsText.join('\n');
+
+            navigator.clipboard.writeText(fullText).then(() => {
+                alert(`✅ Đã sao chép thông tin ${selectedItems.length} textlink vào bộ nhớ tạm!\n(Bạn có thể dán Ctrl+V trực tiếp vào Excel, Google Sheets, Zalo...)`);
+            }).catch(() => {
+                alert('Không thể tự động sao chép. Vui lòng bôi đen và copy thủ công.');
             });
         }
 
