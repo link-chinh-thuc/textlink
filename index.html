@@ -164,6 +164,10 @@
 
                 <div class="flex items-center gap-2">
                     <div id="bulkActionGroup" class="hidden flex items-center gap-1.5">
+                        <!-- NÚT TẠO PHIẾU GIA HẠN MỚI BỔ SUNG -->
+                        <button onclick="openSlipModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition flex items-center gap-1">
+                            <i class="fa-solid fa-file-invoice-dollar"></i> Tạo Phiếu (<span class="bulk-count">0</span>)
+                        </button>
                         <button onclick="bulkSetPayment('Đã thanh toán')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition">
                             <i class="fa-solid fa-check-double"></i> Đã TT (<span class="bulk-count">0</span>)
                         </button>
@@ -318,11 +322,58 @@
         </div>
     </div>
 
+    <!-- MODAL TẠO PHIẾU ĐỀ XUẤT / GIA HẠN TEXTLINK (MỚI BỔ SUNG) -->
+    <div id="slipModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-file-invoice-dollar text-indigo-600"></i> Phiếu Đề Xuất Gia Hạn Textlink
+                </h3>
+                <button onclick="closeSlipModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="space-y-3 flex-1 overflow-y-auto pr-1">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Tên Nhân Viên</label>
+                        <input type="text" id="slipEmployee" value="Ryan" oninput="updateSlipPreview()" class="w-full border border-slate-300 p-2 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Số Đơn / Mã Phiếu</label>
+                        <input type="text" id="slipOrderNo" value="06" oninput="updateSlipPreview()" class="w-full border border-slate-300 p-2 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 pt-1">
+                    <input type="checkbox" id="slipGroupByPartner" onchange="updateSlipPreview()" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                    <label for="slipGroupByPartner" class="text-xs font-semibold text-slate-700 cursor-pointer">
+                        Phân loại danh sách nhóm theo từng Đối tác
+                    </label>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nội dung phiếu (Xem trước)</label>
+                    <textarea id="slipPreviewText" rows="12" class="w-full border border-slate-300 p-3 rounded-xl font-mono text-xs text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none leading-relaxed shadow-inner"></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center pt-4 mt-2 border-t border-slate-100">
+                <span class="text-xs text-slate-400">Có thể chỉnh sửa trực tiếp trong ô văn bản</span>
+                <div class="flex gap-2">
+                    <button type="button" onclick="closeSlipModal()" class="px-4 py-2 border rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50">Đóng</button>
+                    <button type="button" onclick="copySlipText()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-copy"></i> Sao Chép Nội Dung
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // =========================================================================
         // ⚙️ DÁN URL WEB APP CỦA GOOGLE APPS SCRIPT VÀO ĐÂY:
         // =========================================================================
-        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyZNYBnS_TC_R9_AtCIZw0P9cfhKzvHyWM-dcqh889cHvbTi22Di-VTVzhXnnJMaay-/exec'; // Dạng: https://script.google.com/macros/s/AKfycb.../exec
+        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyZNYBnS_TC_R9_AtCIZw0P9cfhKzvHyWM-dcqh889cHvbTi22Di-VTVzhXnnJMaay-/exec'; 
 
         let links = [];
         let cryptoRate = 25400;
@@ -332,7 +383,7 @@
             loadFromGoogleSheets();
         });
 
-        // 📥 ĐỌC DỮ LIỆU TỪ GOOGLE SHEET (ĐÃ BẢO VỆ CHUẨN ĐỊNH DẠNG NGÀY)
+        // 📥 ĐỌC DỮ LIỆU TỪ GOOGLE SHEET
         async function loadFromGoogleSheets() {
             updateSyncBadge('syncing', 'Đang tải dữ liệu...');
             
@@ -355,8 +406,8 @@
                         anchor: row[2] || '',
                         url: row[3] || '',
                         price: parseFloat(row[4]) || 0,
-                        startDate: formatDateDisplay(row[5] || ''), // Chuẩn hóa về DD/MM/YYYY
-                        endDate: formatDateDisplay(row[6] || ''),   // Chuẩn hóa về DD/MM/YYYY
+                        startDate: formatDateDisplay(row[5] || ''),
+                        endDate: formatDateDisplay(row[6] || ''),
                         paymentStatus: row[7] || 'Chưa thanh toán',
                         status: row[8] || 'active',
                         partner: row[9] || '',
@@ -421,24 +472,20 @@
             render();
         }
 
-        // BỘ PARSER NGÀY THÔNG MINH - XÓA BỎ LỆCH MÚI GIỜ UTC
         function parseToDate(dateStr) {
             if (!dateStr) return null;
             dateStr = String(dateStr).trim();
 
-            // Nếu dữ liệu là chuỗi ISO UTC (VD: 2026-08-14T17:00:00.000Z)
             if (dateStr.includes('T')) {
                 const d = new Date(dateStr);
                 return isNaN(d) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
             }
 
-            // Dạng DD/MM/YYYY hoặc DD-MM-YYYY
             if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/.test(dateStr)) {
                 const parts = dateStr.split(/[\/\-]/);
                 return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
             }
 
-            // Dạng YYYY-MM-DD hoặc YYYY/MM/DD
             if (/^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}$/.test(dateStr)) {
                 const parts = dateStr.split(/[\/\-]/);
                 return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
@@ -448,7 +495,6 @@
             return isNaN(d) ? null : d;
         }
 
-        // LUÔN ÉP HIỂN THỊ CHUẨN DD/MM/YYYY
         function formatDateDisplay(dateStr) {
             const d = parseToDate(dateStr);
             if (!d) return dateStr || '';
@@ -707,6 +753,115 @@
                     </td>
                 `;
                 tbody.appendChild(tr);
+            });
+        }
+
+        // =========================================================================
+        // 📋 TÍNH NĂNG MỚI: TẠO PHIẾU ĐỀ XUẤT / GIA HẠN TEXTLINK
+        // =========================================================================
+        function openSlipModal() {
+            const selected = document.querySelectorAll('.row-checkbox:checked');
+            const selectedIds = Array.from(selected).map(cb => cb.value);
+            if (selectedIds.length === 0) return alert('Vui lòng chọn ít nhất 1 textlink!');
+
+            // Khôi phục tên NV nếu đã lưu trước đó
+            const savedEmp = localStorage.getItem('slip_employee_name');
+            if (savedEmp) document.getElementById('slipEmployee').value = savedEmp;
+
+            updateSlipPreview();
+            document.getElementById('slipModal').classList.remove('hidden');
+        }
+
+        function closeSlipModal() {
+            document.getElementById('slipModal').classList.add('hidden');
+        }
+
+        function updateSlipPreview() {
+            const selected = document.querySelectorAll('.row-checkbox:checked');
+            const selectedIds = Array.from(selected).map(cb => cb.value);
+            const selectedItems = links.filter(l => selectedIds.includes(l.id));
+
+            const employeeName = document.getElementById('slipEmployee').value.trim() || 'Ryan';
+            const orderNo = document.getElementById('slipOrderNo').value.trim() || '01';
+            const isGroupByPartner = document.getElementById('slipGroupByPartner').checked;
+
+            // Lưu tên NV
+            localStorage.setItem('slip_employee_name', employeeName);
+
+            const today = new Date();
+            const dateStr = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
+
+            // Danh sách Đối tác duy nhất
+            const partners = [...new Set(selectedItems.map(i => i.partner || 'Khác'))].filter(Boolean).join(', ');
+
+            // Danh sách Site đích duy nhất
+            const targetSites = [...new Set(selectedItems.map(i => extractDomain(i.url)))].filter(Boolean).join(', ');
+
+            let totalUSD = 0;
+            let bodyText = "";
+
+            if (isGroupByPartner) {
+                // Nhóm danh sách theo từng Đối tác
+                const grouped = {};
+                selectedItems.forEach(item => {
+                    const p = item.partner || 'Khác';
+                    if (!grouped[p]) grouped[p] = [];
+                    grouped[p].push(item);
+                    totalUSD += parseFloat(item.price) || 0;
+                });
+
+                for (const [partnerName, items] of Object.entries(grouped)) {
+                    bodyText += `--- ĐỐI TÁC: ${partnerName.toUpperCase()} ---\n`;
+                    items.forEach(item => {
+                        const startD = parseToDate(item.startDate);
+                        const endD = parseToDate(item.endDate);
+                        const rangeStr = (startD && endD)
+                            ? `${startD.getDate()}/${startD.getMonth() + 1} - ${endD.getDate()}/${endD.getMonth() + 1}`
+                            : `${item.startDate} - ${item.endDate}`;
+
+                        bodyText += `${rangeStr}\n`;
+                        bodyText += `${item.targetSite} - ${item.price}$\n`;
+                        bodyText += `Anchor: ${item.anchor}\n`;
+                        bodyText += `url: ${item.url}\n\n`;
+                    });
+                }
+            } else {
+                // Danh sách liệt kê dạng chuẩn theo ảnh
+                selectedItems.forEach(item => {
+                    totalUSD += parseFloat(item.price) || 0;
+                    const startD = parseToDate(item.startDate);
+                    const endD = parseToDate(item.endDate);
+                    const rangeStr = (startD && endD)
+                        ? `${startD.getDate()}/${startD.getMonth() + 1} - ${endD.getDate()}/${endD.getMonth() + 1}`
+                        : `${item.startDate} - ${item.endDate}`;
+
+                    bodyText += `${rangeStr}\n`;
+                    bodyText += `${item.targetSite} - ${item.price}$\n`;
+                    bodyText += `Anchor: ${item.anchor}\n`;
+                    bodyText += `url: ${item.url}\n\n`;
+                });
+            }
+
+            const fullSlip = `Ngày: ${dateStr}\n` +
+                `Nhân viên : ${employeeName}\n` +
+                `Đơn số : ${orderNo}\n` +
+                `Đối tác : ${partners}\n` +
+                `Đề xuất textlink mới cho site : ${targetSites}\n\n` +
+                `${bodyText.trim()}\n\n` +
+                `Tổng: ${totalUSD}$`;
+
+            document.getElementById('slipPreviewText').value = fullSlip;
+        }
+
+        function copySlipText() {
+            const textarea = document.getElementById('slipPreviewText');
+            textarea.select();
+            textarea.setSelectionRange(0, 99999);
+
+            navigator.clipboard.writeText(textarea.value).then(() => {
+                alert('✅ Đã sao chép phiếu gia hạn vào bộ nhớ tạm!');
+            }).catch(() => {
+                alert('Vui lòng bôi đen và copy thủ công.');
             });
         }
 
